@@ -24,6 +24,8 @@ def check_article(e, check_time, words):
     article_time = datetime.datetime.fromtimestamp(mktime(e.published_parsed))
     if article_time <= check_time:
         return False
+    if not len(words):
+        return True
     for w in words:
         if e.title.lower().find(w) != -1 and e.description.lower().find(w) != -1:
             return True
@@ -32,10 +34,9 @@ def check_article(e, check_time, words):
 if args.show:
     output = ""
     for key, obj in feed_map.items():
-      output += f"{key} {obj['words']}\n"
+      output += f"{key}: {obj['words']}\n"
       for f in obj['feeds']:
         output += f"{f}\n"
-      output += "\n"
     print(output)
 else:
     # Read the feeds
@@ -62,10 +63,9 @@ else:
           email_body += f"{key}\n"
           for e in entries:
             email_body += f"{e.title}: {e.link} ({datetime.datetime.fromtimestamp(mktime(e.published_parsed))})\n"
-          email_body += "\n"
 
         subject = f'{len([x for _, i in article_map.items() if i for x in i])} new {feed_type} articles'
-        message = f"{email_body}Love,\nAutofeed"
+        message = f"{email_body}\nLove,\nAutofeed"
 
         msgs[feed_type] = (subject, message) 
         
