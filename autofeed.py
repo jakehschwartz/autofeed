@@ -17,35 +17,31 @@ args = parser.parse_args()
 
 # Get a list of feeds
 feeds = os.listdir('./feeds/')
-feed_map = {f[0:-4]: open(f'./feeds/{f}',).readlines() for f in feeds}
-filtered_feed_map = {k:list(filter(None, list(map(str.strip, v)))) for k, v in feed_map.items()}
+feed_map = {f[0:-5]: json.load(open(f'./feeds/{f}',)) for f in feeds}
 
 if args.list:
     output = ""
-    for key, entries in filtered_feed_map.items():
+    for key, entries in feed_map.items():
       output += f"{key}\n"
       for e in entries:
         output += f"{e}\n"
       output += "\n"
     print(output)
 else:
-    # Get the last saved time per set of feeds
-    times = {key: datetime.datetime.fromisoformat(value) for key, value in json.load(open('times.json',)).items()}
-
     # Read the feeds
-    new_times = {}
     msgs = {}
-    for feed_type, feeds in filtered_feed_map.items():
-      print("==============")
+    for feed_type, feeds in feed_map.items():
       now = datetime.datetime.utcnow()
-      time = times.get(feed_type, now - datetime.timedelta(days = 30))
+      new_feeds = []
       article_map = {}
       for feed in feeds:
-        d = feedparser.parse(feed)
+        d = feedparser.parse(feed['url'])
+        time = feed.get('last_read',now - datetime.timedelta(days = 30))
         entries = [e for e in d.entries if datetime.datetime.fromtimestamp(mktime(e.published_parsed)) > time]
         if len(entries):
           article_map[d.feed.title] = entries
-      
+        new_feeds.append({'url':feed['url'], 'time':now.isoformat()})
+
       if len(article_map):
         email_body = ""
         for key, entries in article_map.items():
@@ -59,7 +55,9 @@ else:
 
         msgs[feed_type] = (subject, message) 
 
-      new_times[feed_type] = now.isoformat()
+      # After checking everything, save time per list
+      with open(f"./feeds/{feed_type}.json", "w") as outfile:
+        json.dump(new_feeds, outfile)
 
     if args.gmail_username and args.gmail_password:
       sender = f'{args.gmail_username}@gmail.com'
@@ -68,6 +66,7 @@ else:
       s.login(user = args.gmail_username, password = args.gmail_password)
       s.ehlo()
       for k, (subject, message) in msgs.items():
+        print("==============")
         print(subject)
         print(message)
         msg = MIMEText(message, _charset="UTF-8")
@@ -76,7 +75,9 @@ else:
         msg['Subject'] = subject
         s.sendmail(sender, sender, msg.as_string())
       s.quit()
+    else:
+      for k, (subject, message) in msgs.items():
+        print("==============")
+        print(subject)
+        print(message)
 
-    # After checking everything, save time per list
-    with open("times.json", "w") as outfile:
-      json.dump(new_times, outfile)
