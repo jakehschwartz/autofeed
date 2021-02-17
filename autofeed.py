@@ -25,7 +25,7 @@ def check_article(e, check_time, words):
     if article_time <= check_time:
         return False
     for w in words:
-        if e.title.lower().find(w) != -1:
+        if e.title.lower().find(w) != -1 and e.description.lower().find(w) != -1:
             return True
     return False
         
