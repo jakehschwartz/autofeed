@@ -23,7 +23,7 @@ feed_map = json.load(open(file_location))
 if args.show:
     output = ""
     for key, obj in feed_map.items():
-      output += f"{key}\n"
+      output += f"{key} {obj['words']}\n"
       for f in obj['feeds']:
         output += f"{f}\n"
       output += "\n"
@@ -36,6 +36,7 @@ else:
       now = datetime.datetime.utcnow()
       new_feeds = []
       article_map = {}
+      words = feeds_dict.get('words', [])
       for feed in feeds_dict['feeds']:
         d = feedparser.parse(feed['url'])
         time = feed.get('last_read', (now - datetime.timedelta(days = 30)).isoformat())
@@ -57,7 +58,7 @@ else:
 
         msgs[feed_type] = (subject, message) 
         
-      new_feed_map[feed_type] = {'feeds':new_feeds}  
+      new_feed_map[feed_type] = {'feeds':new_feeds, 'words': words} 
 
    # After checking everything, save feeds with new times
     with open(file_location, "w") as outfile:
