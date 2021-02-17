@@ -20,6 +20,15 @@ args = parser.parse_args()
 file_location = f'{Path.home()}/.autofeed/feeds.json'
 feed_map = json.load(open(file_location))
 
+def check_article(e, check_time, words):
+    article_time = datetime.datetime.fromtimestamp(mktime(e.published_parsed))
+    if article_time <= check_time:
+        return False
+    for w in words:
+        if e.title.lower().find(w) != -1:
+            return True
+    return False
+        
 if args.show:
     output = ""
     for key, obj in feed_map.items():
@@ -39,8 +48,10 @@ else:
       words = feeds_dict.get('words', [])
       for feed in feeds_dict['feeds']:
         d = feedparser.parse(feed['url'])
-        time = feed.get('last_read', (now - datetime.timedelta(days = 30)).isoformat())
-        entries = [e for e in d.entries if datetime.datetime.fromtimestamp(mktime(e.published_parsed)) > datetime.datetime.fromisoformat(time)]
+        timestr = feed.get('last_read', (now - datetime.timedelta(days = 30)).isoformat())
+        time = datetime.datetime.fromisoformat(timestr)
+
+        entries = [e for e in d.entries if check_article(e, time, words)]
         if len(entries):
           article_map[d.feed.title] = entries
         new_feeds.append({'url':feed['url'], 'last_read':now.isoformat()})
